@@ -1,5 +1,6 @@
 import express from "express"
 import dotenv from 'dotenv'
+import { WebSocketServer } from "ws";
 
 // Config
 dotenv.config()
@@ -20,6 +21,25 @@ app.use("/video", VideoRouter)
 const server = app.listen(port, () =>{
     console.log(`🚀 Serveur démaré avec succès sur le port ${port}`)
 })
+
+// WebSocketServer & VideoController
+const wss = new WebSocketServer({ server })
+import VideoController from './controller/video.js'
+
+wss.on('connection', (ws) => {
+    console.log("✅ Connexion établie avec le client")
+
+    ws.on('message', async (data) =>{
+        try {  
+            const { url } = JSON.parse(data);
+
+            await VideoController.create(url, ws)
+        } catch {
+            ws.send(JSON.stringify({message: 'Merci de rééssayer ultérieurement' }));
+        }
+    })
+})
+
 // Throw warning alert 
 if(!process.env.PORT){
     console.warn("⚠️ Vous n'avez pas spécifier de port. Utilisation du port par défaut : 3000")
