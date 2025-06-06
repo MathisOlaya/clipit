@@ -9,6 +9,13 @@ const app = express();
 app.use(express.json())
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || 'http://localhost'
+
+// Import Router
+import VideoRouter from "./router/video.js";
+
+// Listen router
+app.use("/video", VideoRouter)
+
 // Start server
 const server = app.listen(port, () =>{
     console.log(`🚀 Serveur démaré avec succès sur le port ${port}`)
