@@ -2,6 +2,13 @@ import ytdl from '@distube/ytdl-core'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid';
 
+// FFMPEG
+import ffmpeg from 'fluent-ffmpeg'
+import staticFfmpeg from 'ffmpeg-static'
+
+// FFMPEG Config
+ffmpeg.setFfmpegPath(staticFfmpeg);
+
 class VideoController {
     constructor(){}
     async create(url, ws){
@@ -31,6 +38,63 @@ class VideoController {
             return res.status(500).json({message: "Merci de réessayer ultérieurement"})
         }
         
+    }
+    async getPreview(req, res) {
+        // Get UUID
+        const { uuid } = req.params
+
+        if(!uuid){
+            return res.status(404).json({message: "L'identifiant de la vidéo n'a pas été trouvé"})
+        }
+
+        // Video Path 
+        const path = `uploads/${uuid}.mp4`
+        if(!fs.existsSync(path)){
+            return res.status(404).json({message: "Aucune vidéo n'a été trouvée avec cet identifiant"})
+        }
+
+        // Get FIRST 10 seconds of the video
+        const outputPath = `uploads/${uuid}-preview.mp4`
+        ffmpeg(path).setStartTime(0).setDuration(10).output(outputPath).on('end', () => {
+            // Is video existing
+            if (!fs.existsSync(outputPath)) {
+                return res.status(404).send('Vidéo non trouvée');
+            }
+
+            const stat = fs.statSync(outputPath);
+            const fileSize = stat.size;
+            const range = req.headers.range;
+
+            if (range) {
+                const parts = range.replace(/bytes=/, "").split("-");
+                const start = parseInt(parts[0], 10);
+                const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+                if (start >= fileSize) {
+                res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
+                return;
+                }
+
+                const chunksize = (end - start) + 1;
+                const file = fs.createReadStream(outputPath, { start, end });
+
+                res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': 'video/mp4', // adapte selon ton format
+                });
+
+                file.pipe(res);
+            } else {
+                // Pas de range header, envoie la vidéo entière
+                res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': 'video/mp4',
+                });
+                fs.createReadStream(outputPath).pipe(res);
+            }
+        }).run()
     }
 }
 
