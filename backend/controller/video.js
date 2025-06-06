@@ -95,6 +95,29 @@ class VideoController {
     const path = `uploads/${uuid}.mp4`
     if (!fs.existsSync(path)) {
       return res.status(404).json({ message: "Aucune vidéo n'a été trouvée avec cet identifiant" })
+  async getAllSecondaryVideos(req, res) {
+    const DIRECTORY_PATH = 'video/'
+
+    const folders = fs
+      .readdirSync(DIRECTORY_PATH, { withFileTypes: true })
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name)
+
+    const Videos = []
+    // foreach folders, get image with metadata
+    for (const folder of folders) {
+      const currentFolderPath = path.join(DIRECTORY_PATH, folder)
+
+      try {
+        const metadata = JSON.parse(fs.readFileSync(path.join(currentFolderPath, 'metadata.json')))
+
+        Videos.push({
+          coverURL: `${process.env.HOST}:${process.env.PORT}/videos/${folder}/cover.png`,
+          metadata,
+        })
+      } catch (err) {
+        console.error('Erreur lors de lecture du fichier', err)
+      }
     }
 
     // Get FIRST 10 seconds of the video
