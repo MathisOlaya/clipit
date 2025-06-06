@@ -1,6 +1,5 @@
 <script setup lang="ts">
 // Vue
-import { ref } from 'vue'
 import { ref, onMounted } from 'vue'
 
 import Hr from '../components/Hr.vue'
@@ -51,22 +50,34 @@ function submitDownloader() {
     }
   }
 }
+
+function downloadVideo() {
+  const uuid = localStorage.getItem('uuid-vid')
+  const link = document.createElement('a')
+  link.href = `${import.meta.env.VITE_BACKEND_HOST}/final/${uuid}.mp4`
+  link.download = '🚀 Final - ClipIt.mp4'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+onMounted(async () => {
+  // GET Secondary VIDS data^
+  try {
+    const response = await ApiService.getSecondaryVideos()
+
+    if (response.status === 200) {
+      secondaryVids.value = response.data.videos
+    }
+  } catch {
+    errorMessage.value = 'Une erreur du serveur est intervenue'
+  }
+})
 </script>
 
 <template>
   <main>
     <!-- Error -->
-    <p v-if="errorMessage">{{ errorMessage }}</p>
-    <!-- Status Message -->
-    <p v-if="statusMessage">{{ statusMessage }}</p>
-    <div>
-      <input
-        v-model="url"
-        type="url"
-        name="url"
-        placeholder="Coller l'URL de votre vidéo Youtube"
-      />
-      <button type="submit" @click="submitDownloader">Valider</button>
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
     <div class="content">
