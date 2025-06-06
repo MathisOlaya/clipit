@@ -1,6 +1,7 @@
 import express from "express"
 import dotenv from 'dotenv'
 import { WebSocketServer } from "ws";
+import cors from 'cors'
 
 // Config
 dotenv.config()
@@ -9,6 +10,12 @@ dotenv.config()
 const app = express();
 app.use(express.json())
 const port = process.env.PORT || 3000;
+
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+  }),
+)
 const host = process.env.HOST || 'http://localhost'
 
 // Import Router
