@@ -31,10 +31,12 @@ wss.on('connection', (ws) => {
 
     ws.on('message', async (data) =>{
         try {  
+            console.log("🚀 Lancement du processus")
             const { url } = JSON.parse(data);
 
             await VideoController.create(url, ws)
-        } catch {
+        } catch(error) {
+            console.error(error)
             ws.send(JSON.stringify({message: 'Merci de rééssayer ultérieurement' }));
         }
     })
