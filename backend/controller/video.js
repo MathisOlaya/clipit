@@ -1,6 +1,7 @@
 import ytdl from '@distube/ytdl-core'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
+import path from 'path'
 
 // FFMPEG
 import ffmpeg from 'fluent-ffmpeg'
@@ -11,7 +12,7 @@ ffmpeg.setFfmpegPath(staticFfmpeg)
 
 class VideoController {
   constructor() {}
-  async create(url, ws) {
+  async create(url, videoID, ws) {
     // Youtube VIDEO URL
     if (!url) {
       return ws.send(JSON.stringify({ message: "Aucune URL n'a été fournie" }))
@@ -33,23 +34,33 @@ class VideoController {
       ytdl(url).pipe(fileStream)
 
       // On Download DONE
-      fileStream.on('finish', () => {
+      fileStream.on('finish', async () => {
+        // Stack both videos
+        ws.send(JSON.stringify({ message: 'Empilage des 2 vidéos...', type: 'pending' }))
+        await this.stackVideos(
+          `uploads/${uniqueID}.mp4`,
+          this.getSecondaryVideoPathById(videoID),
+          `final/${uniqueID}.mp4`,
+        )
+
+        // Get preview
+        ws.send(JSON.stringify({ message: "Création d'une prévisualisation...", type: 'pending' }))
+        const previewURL = await this.getPreview(uniqueID)
+
         ws.send(
           JSON.stringify({
-            message: '✅ Le téléchargement est terminé.',
+            message: '✅ La vidéo est prête.',
             type: 'done',
             id: uniqueID,
+            previewURL,
           }),
         )
       })
     } catch (err) {
       console.log(err)
-      return res.status(500).json({ message: 'Merci de réessayer ultérieurement' })
+      return ws.send(JSON.stringify({ message: 'Merci de réessayer ultérieurement' }))
     }
   }
-  async getPreview(req, res) {
-    // Get UUID
-    const { uuid } = req.params
   getPreview(uuid) {
     return new Promise((resolve, reject) => {
       const path = `final/${uuid}.mp4`
@@ -76,9 +87,6 @@ class VideoController {
     })
   }
 
-    if (!uuid) {
-      return res.status(404).json({ message: "L'identifiant de la vidéo n'a pas été trouvé" })
-    }
   stackVideos(top, bottom, output) {
     return new Promise((resolve, reject) => {
       ffmpeg()
@@ -116,10 +124,6 @@ class VideoController {
     })
   }
 
-    // Video Path
-    const path = `uploads/${uuid}.mp4`
-    if (!fs.existsSync(path)) {
-      return res.status(404).json({ message: "Aucune vidéo n'a été trouvée avec cet identifiant" })
   async getAllSecondaryVideos(req, res) {
     const DIRECTORY_PATH = 'video/'
 
@@ -145,53 +149,9 @@ class VideoController {
       }
     }
 
-    // Get FIRST 10 seconds of the video
-    const outputPath = `uploads/${uuid}-preview.mp4`
-    ffmpeg(path)
-      .setStartTime(0)
-      .setDuration(10)
-      .output(outputPath)
-      .on('end', () => {
-        // Is video existing
-        if (!fs.existsSync(outputPath)) {
-          return res.status(404).send('Vidéo non trouvée')
-        }
+    return res.status(200).json({ videos: Videos })
+  }
 
-        const stat = fs.statSync(outputPath)
-        const fileSize = stat.size
-        const range = req.headers.range
-
-        if (range) {
-          const parts = range.replace(/bytes=/, '').split('-')
-          const start = parseInt(parts[0], 10)
-          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
-
-          if (start >= fileSize) {
-            res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize)
-            return
-          }
-
-          const chunksize = end - start + 1
-          const file = fs.createReadStream(outputPath, { start, end })
-
-          res.writeHead(206, {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunksize,
-            'Content-Type': 'video/mp4', // adapte selon ton format
-          })
-
-          file.pipe(res)
-        } else {
-          // Pas de range header, envoie la vidéo entière
-          res.writeHead(200, {
-            'Content-Length': fileSize,
-            'Content-Type': 'video/mp4',
-          })
-          fs.createReadStream(outputPath).pipe(res)
-        }
-      })
-      .run()
   getSecondaryVideoPathById(id) {
     const index = JSON.parse(fs.readFileSync('video/index.json'))
 
