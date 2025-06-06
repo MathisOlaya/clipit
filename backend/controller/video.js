@@ -50,6 +50,31 @@ class VideoController {
   async getPreview(req, res) {
     // Get UUID
     const { uuid } = req.params
+  getPreview(uuid) {
+    return new Promise((resolve, reject) => {
+      const path = `final/${uuid}.mp4`
+      const outputPath = `previews/${uuid}-preview.mp4`
+
+      if (!fs.existsSync(path)) {
+        return reject(new Error("Aucune vidéo n'a été trouvée avec cet identifiant"))
+      }
+
+      ffmpeg(path)
+        .setStartTime(0)
+        .setDuration(10)
+        .output(outputPath)
+        .on('end', () => {
+          if (!fs.existsSync(outputPath)) {
+            return reject(new Error('Vidéo de preview non trouvée'))
+          }
+          resolve(`${process.env.HOST}:${process.env.PORT}/${outputPath}`)
+        })
+        .on('error', (err) => {
+          reject(err)
+        })
+        .run()
+    })
+  }
 
     if (!uuid) {
       return res.status(404).json({ message: "L'identifiant de la vidéo n'a pas été trouvé" })
