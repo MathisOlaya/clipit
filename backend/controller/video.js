@@ -54,6 +54,42 @@ class VideoController {
     if (!uuid) {
       return res.status(404).json({ message: "L'identifiant de la vidéo n'a pas été trouvé" })
     }
+  stackVideos(top, bottom, output) {
+    return new Promise((resolve, reject) => {
+      ffmpeg()
+        .input(top)
+        .input(bottom)
+        .inputOptions(['-discard', 'nokey'])
+        .inputOptions(['-discard', 'nokey'])
+        .complexFilter([
+          '[0:v]scale=1080:960[top]; [1:v]scale=1080:960[bottom]; [top][bottom]vstack=inputs=2[out]',
+        ])
+        .outputOptions([
+          '-map',
+          '[out]', // map video filtrée
+          '-map',
+          '0:a?', // map audio première entrée (optionnel)
+          '-vcodec',
+          'libx264',
+          '-r',
+          '30',
+          '-c:a',
+          'copy',
+        ])
+        .output(output)
+        .on('start', (cmd) => console.log('▶️ Start:', cmd))
+        .on('stderr', (line) => console.log('⚙️ FFmpeg:', line))
+        .on('end', () => {
+          console.log('✅ Stack terminé')
+          resolve()
+        })
+        .on('error', (err) => {
+          console.error('❌ Erreur FFmpeg', err)
+          reject(err)
+        })
+        .run()
+    })
+  }
 
     // Video Path
     const path = `uploads/${uuid}.mp4`
