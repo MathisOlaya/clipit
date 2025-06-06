@@ -167,6 +167,16 @@ class VideoController {
         }
       })
       .run()
+  getSecondaryVideoPathById(id) {
+    const index = JSON.parse(fs.readFileSync('video/index.json'))
+
+    for (const vid of index) {
+      if (vid.fk === id) {
+        return `video/${vid.path}`
+      }
+    }
+
+    return null
   }
 }
 
