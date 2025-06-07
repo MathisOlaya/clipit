@@ -9,6 +9,7 @@ import ApiService from '../services/ApiService.ts'
 // REFs
 const url = ref('')
 const secondaryVidIndex = ref(0)
+const cutTime = ref(60)
 const previewURL = ref('')
 const errorMessage = ref('')
 const statusMessage = ref('')
@@ -32,7 +33,13 @@ function submitDownloader() {
     statusMessage.value = 'Connexion au serveur établie'
 
     // Start VIDEO Downloading
-    ws.send(JSON.stringify({ url: url.value, videoIndex: secondaryVidIndex.value }))
+    ws.send(
+      JSON.stringify({
+        url: url.value,
+        videoIndex: secondaryVidIndex.value,
+        cuttingTime: cutTime.value,
+      }),
+    )
   }
 
   ws.onmessage = (event) => {
@@ -59,6 +66,20 @@ function downloadVideo() {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+}
+
+function getMinutesFromSeconds(seconds: number) {
+  let remainingTime = seconds
+  let minutes = 0
+
+  while (remainingTime >= 60) {
+    minutes++
+    remainingTime -= 60
+  }
+
+  return minutes === 1
+    ? `${minutes} minute et ${remainingTime} seconde(s)`
+    : `${minutes} minutes et ${remainingTime} seconde(s)`
 }
 
 onMounted(async () => {
@@ -110,6 +131,14 @@ onMounted(async () => {
       </div>
     </div>
     <Hr />
+    <div style="display: flex; flex-direction: column; align-items: center">
+      <div style="display: flex; gap: 6px">
+        <p>Découpage personnalisé :</p>
+        <p>{{ cutTime >= 60 ? getMinutesFromSeconds(cutTime) : cutTime + ' secondes' }}</p>
+      </div>
+      <input type="range" v-model="cutTime" min="10" max="600" />
+    </div>
+    <Hr />
     <div class="creationButton">
       <p>Création de la vidéo en un temps éclair</p>
       <button type="submit" @click="submitDownloader">Créer</button>
@@ -128,6 +157,13 @@ onMounted(async () => {
           <source :src="previewURL" type="video/mp4" />
         </video>
       </div>
+    </div>
+    <div style="display: flex; flex-direction: row; align-items: center">
+      <div style="display: flex; flex-direction: column">
+        <p style="font-size: 32px">Un rendu de qualité</p>
+        <p>Créer vos vidéos toutes faites en quelques clics seulement</p>
+      </div>
+      <img width="900px" src="../assets/phone.png" alt="" />
     </div>
   </main>
 </template>
