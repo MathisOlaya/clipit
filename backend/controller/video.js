@@ -12,7 +12,7 @@ ffmpeg.setFfmpegPath(staticFfmpeg)
 
 class VideoController {
   constructor() {}
-  async create(url, videoID, ws) {
+  async create(url, videoID, cuttingTime, ws) {
     // Youtube VIDEO URL
     if (!url) {
       return ws.send(JSON.stringify({ message: "Aucune URL n'a été fournie" }))
@@ -40,10 +40,14 @@ class VideoController {
         await this.stackVideos(
           `uploads/${uniqueID}.mp4`,
           this.getSecondaryVideoPathById(videoID),
-          `final/${uniqueID}.mp4`,
+          `full/${uniqueID}.mp4`,
         )
 
-        // Get preview
+        // Cut video in multiple part
+        ws.send(JSON.stringify({ message: 'Découpage de la vidéo...', type: 'pending' }))
+        this.cutVideoIntoParts(cuttingTime, uniqueID, ws)
+
+        // // Get preview
         ws.send(JSON.stringify({ message: "Création d'une prévisualisation...", type: 'pending' }))
         const previewURL = await this.getPreview(uniqueID)
 
@@ -58,12 +62,14 @@ class VideoController {
       })
     } catch (err) {
       console.log(err)
-      return ws.send(JSON.stringify({ message: 'Merci de réessayer ultérieurement' }))
+      return ws.send(
+        JSON.stringify({ message: 'Merci de réessayer ultérieurement', type: 'error' }),
+      )
     }
   }
   getPreview(uuid) {
     return new Promise((resolve, reject) => {
-      const path = `final/${uuid}.mp4`
+      const path = `full/${uuid}.mp4`
       const outputPath = `previews/${uuid}-preview.mp4`
 
       if (!fs.existsSync(path)) {
@@ -122,6 +128,39 @@ class VideoController {
         })
         .run()
     })
+  }
+
+  cutVideoIntoParts(segmentDuration, uuid, ws) {
+    try {
+      fs.mkdirSync(`final/${uuid}`)
+
+      // Get video duration
+      ffmpeg.ffprobe(`full/${uuid}.mp4`, (err, metadata) => {
+        const totalDuration = Math.floor(metadata.format.duration)
+        const segmentCount = Math.ceil(totalDuration / segmentDuration)
+
+        for (let i = 0; i < segmentCount; i++) {
+          // Update WS Status
+          ws.send(
+            JSON.stringify({
+              message: `Découpage de la vidéo... ${i} / ${segmentCount}`,
+              type: 'pending',
+            }),
+          )
+
+          const start = i * segmentDuration
+          const outPutPath = path.join(`final/${uuid}/📹 Clip It - Partie ${i + 1}.mp4`)
+
+          ffmpeg(`full/${uuid}.mp4`)
+            .setStartTime(start)
+            .setDuration(segmentDuration)
+            .output(outPutPath)
+            .run()
+        }
+      })
+    } catch {
+      ws.send(JSON.stringify({ message: 'Merci de réessayer ultérieurement', type: 'error' }))
+    }
   }
 
   async getAllSecondaryVideos(req, res) {
