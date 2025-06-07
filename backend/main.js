@@ -25,9 +25,11 @@ const host = process.env.HOST || 'http://localhost'
 
 // Import Router
 import VideoRouter from './router/video.js'
+import AuthRouter from './router/auth.js'
 
 // Listen router
 app.use('/video', VideoRouter)
+app.use('/auth', AuthRouter)
 
 // Start server
 const server = app.listen(port, () => {
