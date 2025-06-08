@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // Vue
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 import Hr from '../components/Hr.vue'
 // Services
@@ -10,11 +12,11 @@ import ApiService from '../services/ApiService.ts'
 const url = ref('')
 const secondaryVidIndex = ref(0)
 const cutTime = ref(60)
-const previewURL = ref('')
 const errorMessage = ref('')
-const statusMessage = ref('')
 
 const secondaryVids = ref([])
+
+const buttonDisabled = ref(false)
 
 function submitDownloader() {
   // Set ERROR Message if URL is null
@@ -25,37 +27,12 @@ function submitDownloader() {
   // Else, unset error message
   errorMessage.value = ''
 
-  // Create WebSocket Connexion
-  statusMessage.value = 'Connexion en cours au serveur'
-  const ws = new WebSocket(import.meta.env.VITE_BACKEND_WS || 'ws://localhost:3000')
+  // Save Query
+  localStorage.setItem('yt-url', url.value)
+  localStorage.setItem('clip-fk', secondaryVidIndex.value.toString())
+  localStorage.setItem('clip-duration', cutTime.value.toString())
 
-  ws.onopen = () => {
-    statusMessage.value = 'Connexion au serveur établie'
-
-    // Start VIDEO Downloading
-    ws.send(
-      JSON.stringify({
-        url: url.value,
-        videoIndex: secondaryVidIndex.value,
-        cuttingTime: cutTime.value,
-      }),
-    )
-  }
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-
-    // Set status message
-    statusMessage.value = data.message
-
-    if (data.type === 'done') {
-      // Save UUID
-      localStorage.setItem('uuid-vid', data.id)
-
-      // Set Preview
-      previewURL.value = data.previewURL
-    }
-  }
+  router.push({ name: 'download' })
 }
 
 function downloadVideo() {
@@ -141,23 +118,10 @@ onMounted(async () => {
     <Hr />
     <div class="creationButton">
       <p>Création de la vidéo en un temps éclair</p>
-      <button type="submit" @click="submitDownloader">Créer</button>
+      <button type="submit" @click="submitDownloader" :disabled="buttonDisabled">Créer</button>
     </div>
     <Hr size="20%" />
-    <div class="downloadSection" v-if="statusMessage">
-      <!-- Status Message -->
-      <div class="statusContainer">
-        <p class="status">{{ statusMessage }}</p>
-        <span v-if="!previewURL" class="loader"></span>
-      </div>
-      <div v-if="previewURL" style="display: flex; flex-direction: column; align-items: center">
-        <button @click="downloadVideo">Télécharger</button>
-        <p>Prévisualisation de 10 secondes 👇</p>
-        <video controls>
-          <source :src="previewURL" type="video/mp4" />
-        </video>
-      </div>
-    </div>
+
     <div style="display: flex; flex-direction: row; align-items: center">
       <div style="display: flex; flex-direction: column">
         <p style="font-size: 32px">Un rendu de qualité</p>
@@ -174,55 +138,6 @@ onMounted(async () => {
   background-color: #ef233c;
   opacity: 0.8;
   border: 3px solid #a4161a;
-}
-
-.downloadSection {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.downloadSection video {
-  width: 600px;
-}
-
-.statusContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.statusContainer p {
-  font-size: 20px;
-}
-
-.loader {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: inline-block;
-  position: relative;
-  border: 1px solid;
-  border-color: #fff #fff transparent;
-  box-sizing: border-box;
-  animation: rotation 1s linear infinite;
-}
-.loader::after {
-  content: '';
-  box-sizing: border-box;
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  margin: auto;
-  border: 3px solid;
-  border-color: transparent #3f5cb0 #3f5cb0;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  animation: rotationBack 0.5s linear infinite;
-  transform-origin: center center;
 }
 
 main {
@@ -313,23 +228,5 @@ button[type='submit']:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-@keyframes rotation {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes rotationBack {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(-360deg);
-  }
 }
 </style>
