@@ -57,6 +57,19 @@ class AuthController {
       return res.status(500).json({ message: 'Veuillez réessayer utlérieurement' })
     }
   }
+
+  async me(req, res) {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Non authentifié' })
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+      return res.status(200).json({ message: 'Ok' })
+    } catch (err) {
+      res.status(401).json({ error: 'Token invalide' })
+      console.error(err)
+    }
+  }
 }
 
 export default new AuthController()
