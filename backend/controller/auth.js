@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 class AuthController {
   async register(req, res) {
@@ -27,7 +28,7 @@ class AuthController {
       const hashedPassword = await bcrypt.hash(password, 10)
 
       //Create account
-      await prisma.user.create({
+      const user = await prisma.user.create({
         data: {
           mail,
           password: hashedPassword,
@@ -37,6 +38,17 @@ class AuthController {
             },
           },
         },
+      })
+
+      // Generate JWT
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET_KEY, { expiresIn: '1d' })
+
+      // Save it to cookies
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       })
 
       return res.status(200).json({ message: 'Compte créer avec succès' })
