@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import { WebSocketServer } from 'ws'
 import path, { dirname } from 'path'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
 // Config
 dotenv.config()
@@ -10,6 +11,7 @@ dotenv.config()
 // Server's CONFIG
 const app = express()
 app.use(express.json())
+app.use(cookieParser())
 app.use('/videos', express.static(path.join(import.meta.dirname, 'video')))
 app.use('/previews', express.static(path.join(import.meta.dirname, 'previews')))
 app.use('/final', express.static(path.join(import.meta.dirname, 'final')))
