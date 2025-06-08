@@ -1,5 +1,22 @@
-<script>
+<script setup>
+import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import ApiService from '@/services/ApiService'
+
+const authStore = useAuthStore()
+// Check user authentication at start
+onMounted(async () => {
+  try {
+    const response = await ApiService.getAuthenticationState()
+
+    if (response.status === 200) {
+      authStore.login()
+    }
+  } catch {
+    authStore.logout()
+  }
+})
 </script>
 <template>
   <div class="main">
@@ -8,7 +25,8 @@ import { RouterLink } from 'vue-router'
     </RouterLink>
     <div>
       <RouterLink to="pricing"> Tarifs </RouterLink>
-      <RouterLink to="login">Se connecter</RouterLink>
+      <RouterLink v-if="!authStore.isAuthenticated" to="login">Se connecter</RouterLink>
+      <RouterLink v-else to="profil">Profil</RouterLink>
     </div>
   </div>
 </template>
