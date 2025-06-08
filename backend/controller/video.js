@@ -21,16 +21,32 @@ class VideoController {
     try {
       // Validate VIDEO's URL
       if (!ytdl.validateURL(url)) {
-        return res.status(400).json({ message: "L'URL fournie n'est pas valide", type: 'error' })
+        return ws.send(JSON.stringify({ message: "L'URL fournie n'est pas valide", type: 'error' }))
       }
 
       // Get Youtube Video Title
       ws.send(JSON.stringify({ message: "Création d'un identifiant unique...", type: 'pending' }))
       const uniqueID = uuidv4()
 
+      // Get video informations
+      ws.send(
+        JSON.stringify({ message: 'Obtention des informations de la vidéo...', type: 'pending' }),
+      )
+      const data = await ytdl.getBasicInfo(url)
+      const basicInfo = {
+        title: data.videoDetails.title,
+        cover: data.videoDetails.thumbnails[data.videoDetails.thumbnails.length - 1].url,
+      }
+
       // Download
       const fileStream = fs.createWriteStream(`uploads/${uniqueID}.mp4`)
-      ws.send(JSON.stringify({ message: 'Téléchargement de la vidéo...', type: 'pending' }))
+      ws.send(
+        JSON.stringify({
+          message: 'Téléchargement de la vidéo...',
+          type: 'pending',
+          videoData: basicInfo,
+        }),
+      )
       ytdl(url).pipe(fileStream)
 
       // On Download DONE
@@ -130,35 +146,53 @@ class VideoController {
     })
   }
 
-  cutVideoIntoParts(segmentDuration, uuid, ws) {
+  async cutVideoIntoParts(segmentDuration, uuid, ws) {
     try {
       fs.mkdirSync(`final/${uuid}`)
 
-      // Get video duration
-      ffmpeg.ffprobe(`full/${uuid}.mp4`, (err, metadata) => {
-        const totalDuration = Math.floor(metadata.format.duration)
-        const segmentCount = Math.ceil(totalDuration / segmentDuration)
+      const metadata = await new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(`full/${uuid}.mp4`, (err, data) => {
+          if (err) return reject(err)
+          resolve(data)
+        })
+      })
 
-        for (let i = 0; i < segmentCount; i++) {
-          // Update WS Status
-          ws.send(
-            JSON.stringify({
-              message: `Découpage de la vidéo... ${i} / ${segmentCount}`,
-              type: 'pending',
-            }),
-          )
+      const totalDuration = Math.floor(metadata.format.duration)
+      const segmentCount = Math.ceil(totalDuration / segmentDuration)
 
-          const start = i * segmentDuration
-          const outPutPath = path.join(`final/${uuid}/📹 Clip It - Partie ${i + 1}.mp4`)
+      const cutPromises = []
 
+      for (let i = 0; i < segmentCount; i++) {
+        const start = i * segmentDuration
+        const outPutPath = path.join(`final/${uuid}/📹 Clip It - Partie ${i + 1}.mp4`)
+
+        ws.send(
+          JSON.stringify({
+            message: `Découpage de la vidéo... ${i + 1} / ${segmentCount}`,
+            type: 'pending',
+          }),
+        )
+
+        const cutPromise = new Promise((resolve, reject) => {
           ffmpeg(`full/${uuid}.mp4`)
             .setStartTime(start)
             .setDuration(segmentDuration)
             .output(outPutPath)
+            .on('end', resolve)
+            .on('error', () => {
+              // Send WS Error
+              ws.send(JSON.stringify({ message: 'Une erreur est survenue.', type: 'error' }))
+              reject
+            })
             .run()
-        }
-      })
-    } catch {
+        })
+
+        cutPromises.push(cutPromise)
+      }
+
+      await Promise.all(cutPromises)
+    } catch (error) {
+      console.error(error)
       ws.send(JSON.stringify({ message: 'Merci de réessayer ultérieurement', type: 'error' }))
     }
   }
