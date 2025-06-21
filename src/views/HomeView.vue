@@ -3,10 +3,14 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 const router = useRouter()
+import { useAuthStore } from '@/stores/auth.ts'
 
 import Hr from '../components/Hr.vue'
 // Services
 import ApiService from '../services/ApiService.ts'
+import { AxiosError } from 'axios'
+
+const authStore = useAuthStore()
 
 // REFs
 const url = ref('')
@@ -27,12 +31,16 @@ function submitDownloader() {
   // Else, unset error message
   errorMessage.value = ''
 
-  // Save Query
-  localStorage.setItem('yt-url', url.value)
-  localStorage.setItem('clip-fk', secondaryVidIndex.value.toString())
-  localStorage.setItem('clip-duration', cutTime.value.toString())
+  if (authStore.isAuthenticated) {
+    // Save Query
+    localStorage.setItem('yt-url', url.value)
+    localStorage.setItem('clip-fk', secondaryVidIndex.value.toString())
+    localStorage.setItem('clip-duration', cutTime.value.toString())
 
-  router.push({ name: 'download' })
+    router.push({ name: 'download' })
+  } else {
+    router.push({ name: 'login' })
+  }
 }
 
 function downloadVideo() {
@@ -67,8 +75,13 @@ onMounted(async () => {
     if (response.status === 200) {
       secondaryVids.value = response.data.videos
     }
-  } catch {
-    errorMessage.value = 'Une erreur du serveur est intervenue'
+  } catch (err: any) {
+    if (err instanceof AxiosError) {
+      console.log(err.response?.data)
+      errorMessage.value = err.response?.data
+    } else {
+      errorMessage.value = 'Erreur'
+    }
   }
 })
 </script>
@@ -108,7 +121,7 @@ onMounted(async () => {
       </div>
     </div>
     <Hr />
-    <div style="display: flex; flex-direction: column; align-items: center">
+    <div class="cut" style="display: flex; flex-direction: column; align-items: center">
       <div style="display: flex; gap: 6px">
         <p>Découpage personnalisé :</p>
         <p>{{ cutTime >= 60 ? getMinutesFromSeconds(cutTime) : cutTime + ' secondes' }}</p>
@@ -122,12 +135,12 @@ onMounted(async () => {
     </div>
     <Hr size="20%" />
 
-    <div style="display: flex; flex-direction: row; align-items: center">
+    <div class="caption" style="">
       <div style="display: flex; flex-direction: column">
-        <p style="font-size: 32px">Un rendu de qualité</p>
+        <p>Un rendu de qualité</p>
         <p>Créer vos vidéos toutes faites en quelques clics seulement</p>
       </div>
-      <img width="900px" src="../assets/phone.png" alt="" />
+      <img src="../assets/phone.png" alt="" />
     </div>
   </main>
 </template>
@@ -154,6 +167,7 @@ main {
 h1 {
   font-size: 42px;
   padding-bottom: 16px;
+  text-align: center;
 }
 input {
   height: 48px;
@@ -228,5 +242,78 @@ button[type='submit']:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.caption {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.caption img {
+  width: 900px;
+}
+
+.caption div p:first-child {
+  font-size: 32px;
+}
+
+@media (max-width: 480px) {
+  main {
+    padding: 0 20px;
+  }
+  h1 {
+    font-size: 24px;
+  }
+
+  .url-input {
+    gap: 12px;
+  }
+  .url-input input {
+    width: 200px;
+  }
+  .url-input p {
+    text-align: center;
+    max-width: 100px;
+  }
+
+  .secondaryVidsContainer {
+    flex-direction: column;
+  }
+
+  .secondaryVidsContainer img:first-child {
+    width: 100%;
+    height: 150px;
+  }
+
+  .secondaryVid p {
+    text-align: center;
+  }
+
+  input[type='range'] {
+    width: 250px;
+  }
+
+  .caption {
+    flex-direction: column;
+  }
+
+  .caption div p:first-child {
+    font-size: 22px;
+  }
+
+  .caption div {
+    align-items: center;
+    max-width: 380px;
+  }
+
+  .caption div p {
+    text-align: center;
+  }
+
+  .caption img {
+    width: auto;
+    height: 350px;
+  }
 }
 </style>
