@@ -12,7 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@distube/ytdl-core": "^4.16.11",
+    "@distube/ytdl-core": "^4.16.12",
     "@prisma/client": "^6.9.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
@@ -24,7 +24,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.1",
     "uuid": "^11.1.0",
-    "ws": "^8.18.2"
+    "ws": "^8.18.2",
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10",
