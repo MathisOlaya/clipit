@@ -42,4 +42,10 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
 }
+
+@media (max-width: 480px) {
+  .main div {
+    gap: 16px;
+  }
+}
 </style>
