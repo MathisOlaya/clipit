@@ -5,8 +5,11 @@ const apiClient = axios.create({
 })
 
 export default {
+  login(creds: Object) {
+    return apiClient.post('auth/login', creds, { withCredentials: true })
+  },
   getAuthenticationState() {
-    return apiClient.get('auth/me')
+    return apiClient.get('auth/me', { withCredentials: true })
   },
   getSecondaryVideos() {
     return apiClient.get('video/secondary')

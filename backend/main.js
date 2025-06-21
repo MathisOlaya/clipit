@@ -19,11 +19,12 @@ app.use('/final', express.static(path.join(import.meta.dirname, 'final')))
 app.use(
   cors({
     origin: 'http://localhost:5173',
+    credentials: true,
   }),
 )
 
 const port = process.env.PORT || 3000
-const host = process.env.HOST || 'http://localhost'
+const host = process.env.HOST || '0.0.0.0'
 
 // Import Router
 import VideoRouter from './router/video.js'
@@ -34,7 +35,7 @@ app.use('/video', VideoRouter)
 app.use('/auth', AuthRouter)
 
 // Start server
-const server = app.listen(port, () => {
+const server = app.listen(port, host, () => {
   console.log(`🚀 Serveur démaré avec succès sur le port ${port}`)
 })
 

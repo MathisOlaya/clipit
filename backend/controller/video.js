@@ -100,7 +100,7 @@ class VideoController {
           if (!fs.existsSync(outputPath)) {
             return reject(new Error('Vidéo de preview non trouvée'))
           }
-          resolve(`${process.env.HOST}:${process.env.PORT}/${outputPath}`)
+          resolve(`http://${process.env.HOST}:${process.env.PORT}/${outputPath}`)
         })
         .on('error', (err) => {
           reject(err)
@@ -214,7 +214,7 @@ class VideoController {
         const metadata = JSON.parse(fs.readFileSync(path.join(currentFolderPath, 'metadata.json')))
 
         Videos.push({
-          coverURL: `${process.env.HOST}:${process.env.PORT}/videos/${folder}/cover.png`,
+          coverURL: `http://${process.env.HOST}:${process.env.PORT}/videos/${folder}/cover.png`,
           metadata,
         })
       } catch (err) {
